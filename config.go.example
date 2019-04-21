@@ -1,0 +1,9 @@
+package main
+
+const (
+	authBearer   = `UPENN_OD_emjT_1002233`
+	authToken    = `2bbk83v7fasdth34j5asas`
+	httpUser     = `HTTP_USER`
+	httpPass     = `HTTP_PASS`
+	firebaseJson = `firebase-adminsdk.json`
+)

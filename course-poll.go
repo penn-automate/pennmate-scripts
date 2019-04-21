@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"log"
@@ -14,28 +15,21 @@ import (
 )
 
 type CourseStatus struct {
-	ResultData []struct {
-		CourseSection        string `json:"course_section"`
-		SectionIDNormalized  string `json:"section_id_normalized"`
-		PreviousStatus       string `json:"previous_status"`
-		Status               string `json:"status"`
-		StatusCodeNormalized string `json:"status_code_normalized"`
-		Term                 string `json:"term"`
-	} `json:"result_data"`
-	ServiceMeta struct {
-		CurrentPageNumber  int    `json:"current_page_number"`
-		ErrorText          string `json:"error_text"`
-		NextPageNumber     int    `json:"next_page_number"`
-		NumberOfPages      int    `json:"number_of_pages"`
-		PreviousPageNumber int    `json:"previous_page_number"`
-		ResultsPerPage     int    `json:"results_per_page"`
-	} `json:"service_meta"`
+	ResultData  []ResultData `json:"result_data"`
+	ServiceMeta ServiceMeta  `json:"service_meta"`
+}
+type ResultData struct {
+	CourseSection        string `json:"course_section"`
+	SectionIDNormalized  string `json:"section_id_normalized"`
+	PreviousStatus       string `json:"previous_status"`
+	Status               string `json:"status"`
+	StatusCodeNormalized string `json:"status_code_normalized"`
+	Term                 string `json:"term"`
 }
 
 const (
 	courseStatusUrl = `https://esb.isc-seo.upenn.edu/8091/open_data/course_status/2019C/all`
-	authBearer      = `UPENN_OD_emjT_1002233`
-	authToken       = `2bbk83v7fasdth34j5asas`
+	serverUpdateUrl = `https://pennmate.com/notify.php`
 )
 
 var (
@@ -60,13 +54,31 @@ func sendMessage(course string) {
 
 	s, err := sendClient.Send(context.Background(), message)
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+	} else {
+		log.Println("Successfully sent message:", s)
 	}
-	log.Println("Successfully sent message:", s)
+}
+
+func updateToServer(data ResultData) {
+	marshal, e := json.Marshal(data)
+	if e != nil {
+		log.Fatal(e)
+	}
+	request, e := http.NewRequest("POST", serverUpdateUrl, bytes.NewReader(marshal))
+	if e != nil {
+		log.Fatal(e)
+	}
+	request.SetBasicAuth(httpUser, httpPass)
+	request.Header.Set("Content-Type", "application/json; charset=utf-8")
+	response, e := http.DefaultClient.Do(request)
+	if e == nil {
+		log.Println("Updated to server:", response.Status)
+	}
 }
 
 func init() {
-	opt := option.WithCredentialsFile("penn-automate.json")
+	opt := option.WithCredentialsFile(firebaseJson)
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
 		log.Fatalf("error initializing app: %v", err)
@@ -87,9 +99,11 @@ func main() {
 	request.Header.Add("Authorization-Token", authToken)
 	request.Header.Set("Content-Type", "application/json; charset=utf-8")
 	for {
+		time.Sleep(time.Second * 3)
 		response, e := http.DefaultClient.Do(request)
 		if e != nil {
-			log.Fatal(e)
+			log.Println(e)
+			continue
 		}
 		cs := new(CourseStatus)
 		if e = json.NewDecoder(response.Body).Decode(cs); e != nil {
@@ -103,13 +117,13 @@ func main() {
 			if ok && data.Status != prevStat {
 				log.Printf("Course %s has changed to %s", data.SectionIDNormalized, data.StatusCodeNormalized)
 				statusMap[data.CourseSection] = data.Status
-				if data.Status == "O" {
-					go sendMessage(data.SectionIDNormalized)
-				}
+				//if data.Status == "O" {
+				//	go sendMessage(data.SectionIDNormalized)
+				//}
+				go updateToServer(data)
 			} else if !ok {
 				statusMap[data.CourseSection] = data.Status
 			}
 		}
-		time.Sleep(time.Second * 3)
 	}
 }
