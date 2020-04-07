@@ -33,7 +33,7 @@ func main() {
 	}
 
 	count := 0
-	iterator := api.SearchCourseSection(nil)
+	iterator := api.SearchCourseSection(map[string]string{"term": term})
 outer:
 	for retry := 1; retry <= maxRetry; retry++ {
 		if retry != 1 {
