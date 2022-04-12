@@ -14,7 +14,7 @@ const serverUpdateURL = `https://pennmate.com/notify.php`
 
 var statusMap = make(map[string]string)
 
-func updateToServer(data opendata.CourseStatusData) {
+func updateToServer(data opendata.CourseSectionStatus) {
 	marshal, e := json.Marshal(data)
 	if e != nil {
 		log.Fatal(e)
@@ -33,25 +33,25 @@ func updateToServer(data opendata.CourseStatusData) {
 
 func main() {
 	log.Println("The app has started running...")
-	api := opendata.NewOpenDataAPI(authBearer, authToken).GetRegistrar()
+	api := opendata.NewOpenDataAPI(clientId, clientSecret).GetRegistrar()
 	for {
-		time.Sleep(time.Second * 3)
+		time.Sleep(time.Second * 5)
 		data, err := api.GetAllCourseStatus(term)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
-		for _, data := range data {
-			prevStat, ok := statusMap[data.CourseSection]
-			if ok && data.Status != prevStat {
-				log.Printf("Course %s has changed to %s", data.SectionIDNormalized, data.StatusCodeNormalized)
-				statusMap[data.CourseSection] = data.Status
-				//if data.Status == "O" {
-				//	go sendMessage(data.SectionIDNormalized)
+		for _, d := range data {
+			prevStat, ok := statusMap[d.SectionID]
+			if ok && d.Status != prevStat {
+				log.Printf("Course %s has changed to %s", d.SectionIDNormalized, d.StatusCodeNormalized)
+				statusMap[d.SectionID] = d.Status
+				//if d.Status == "O" {
+				//	go sendMessage(d.SectionIDNormalized)
 				//}
-				go updateToServer(data)
+				go updateToServer(d)
 			} else if !ok {
-				statusMap[data.CourseSection] = data.Status
+				statusMap[d.SectionID] = d.Status
 			}
 		}
 	}

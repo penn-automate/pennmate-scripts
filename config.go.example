@@ -1,10 +1,10 @@
 package main
 
 const (
-	term         = `2019C`
-	authBearer   = `UPENN_OD_emjT_1002233`
-	authToken    = `2bbk83v7fasdth34j5asas`
+	term         = `202230`
+    clientId     = `open-data-prod-example`
+    clientSecret = `123e4567-e89b-12d3-a456-426614174000`
 	httpUser     = `HTTP_USER`
 	httpPass     = `HTTP_PASS`
-	firebaseJson = `firebase-adminsdk.json`
+	databaseLink = `/pennmate`
 )

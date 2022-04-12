@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"strings"
 	"time"
 
 	_ "github.com/go-sql-driver/mysql"
@@ -25,9 +26,21 @@ func init() {
 	}
 }
 
+func encodeInstName(i opendata.CourseInstructor) string {
+	var b strings.Builder
+	b.WriteString(i.FirstName)
+	if i.MiddleInitial != nil {
+		b.WriteByte(' ')
+		b.WriteString(*i.MiddleInitial)
+	}
+	b.WriteByte(' ')
+	b.WriteString(i.LastName)
+	return b.String()
+}
+
 func main() {
-	api := opendata.NewOpenDataAPI(authBearer, authToken).GetRegistrar()
-	stmt, e := db.Prepare("REPLACE INTO course_list VALUES(?,?,?,?,?,?,?,?)")
+	api := opendata.NewOpenDataAPI(clientId, clientSecret).GetRegistrar()
+	stmt, e := db.Prepare("REPLACE INTO course_list_new VALUES(?,?,?,?,?,?)")
 	if e != nil {
 		log.Fatal(e)
 	}
@@ -54,20 +67,18 @@ outer:
 			}
 			insts := make([]string, 0, len(data.Instructors))
 			for _, inst := range data.Instructors {
-				insts = append(insts, inst.Name)
+				insts = append(insts, encodeInstName(inst))
 			}
 			instData, e := json.Marshal(insts)
 			if e != nil {
 				log.Fatal(e)
 			}
 			_, e = stmt.Exec(
-				data.SectionID,
-				data.SectionTitle,
-				data.MaxEnrollment,
-				instData,
-				data.Credits,
-				data.Activity,
+				data.SectionId,
 				data.Term,
+				data.SectionTitle,
+				instData,
+				data.Activity,
 				([]byte)(iterator.GetRawData(i)),
 			)
 			if e != nil {
